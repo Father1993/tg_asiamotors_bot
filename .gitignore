@@ -4,6 +4,9 @@ env/
 .env
 .venv/
 
+# Временные и служебные файлы
+bot.txt
+
 # Python
 __pycache__/
 *.py[cod]
