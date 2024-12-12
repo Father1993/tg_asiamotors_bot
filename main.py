@@ -28,11 +28,29 @@ TOKEN = os.getenv('TELEGRAM_TOKEN')
 # ID менеджера
 MANAGER_ID = os.getenv('TELEGRAM_MANAGER_ID')
 
+# Логирование
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
+
+# Константы для состояний разговора
+(
+    WAITING_QUESTION,
+    SURVEY_BUDGET,
+    SURVEY_CAR_TYPE,
+    SURVEY_USAGE,
+    SURVEY_CONCERNS,
+    SURVEY_FEATURES,
+    SURVEY_TIMELINE,
+    SURVEY_TRADE_IN,
+    SURVEY_CONTACT
+) = range(9)
+
+# словарь для хранения ответов пользователей
+survey_responses = {}
 # словарь для хранения состояний пользователей
 user_states = {}
 
@@ -59,13 +77,6 @@ cars_data = {
         ]
     }
 }
-
-# Константы для состояний разговора
-(
-    WAITING_QUESTION,
-) = range(1)
-
-
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начальное меню бота"""
@@ -259,6 +270,184 @@ async def return_to_main_menu_callback(update: Update, context: ContextTypes.DEF
         reply_markup=reply_markup
     )
 
+async def start_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Начало опроса"""
+    query = update.callback_query
+    await query.answer()
+    
+    logger.info(f"Starting survey for user {query.from_user.id}")
+    
+    # Инициализируем хранение ответов пользователя
+    user_id = query.from_user.id
+    survey_responses[user_id] = {}
+    
+    keyboard = [
+        [InlineKeyboardButton("🎯 Начать опрос", callback_data='survey_start')],
+        [InlineKeyboardButton("« Вернуться в меню", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        "🎁 Специальное предложение!\n\n"
+        "Пройдите наш опрос и получите:\n"
+        "✅ Персональную скидку 10000₽\n"
+        "✅ Индивидуальное предложение\n"
+        "✅ Приоритетное обслуживание\n\n"
+        "⏱ Это займет всего 2-3 минуты.",
+        reply_markup=reply_markup
+    )
+    return SURVEY_BUDGET
+
+async def survey_budget(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Вопрос о бюджете"""
+    query = update.callback_query
+    await query.answer()
+    
+    logger.info(f"Survey budget question for user {query.from_user.id}")
+    
+    keyboard = [
+        [InlineKeyboardButton("До 1.5 млн ₽", callback_data='survey_budget_1.5')],
+        [InlineKeyboardButton("1.5 - 2.5 млн ₽", callback_data='survey_budget_2.5')],
+        [InlineKeyboardButton("2.5 - 3.5 млн ₽", callback_data='survey_budget_3.5')],
+        [InlineKeyboardButton("Более 3.5 млн ₽", callback_data='survey_budget_more')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        "1️⃣ Какой бюджет вы рассматриваете для покупки автомобиля?\n\n"
+        "💡 Включая дополнительное оборудование и страховку",
+        reply_markup=reply_markup
+    )
+    return SURVEY_BUDGET
+
+async def survey_car_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Вопрос о типе автомобиля"""
+    query = update.callback_query
+    await query.answer()
+    
+    # Сохраняем ответ о бюджете
+    user_id = query.from_user.id
+    survey_responses[user_id]['budget'] = query.data.split('_')[-1]
+    
+    keyboard = [
+        [InlineKeyboardButton("🚗 Новый автомобиль", callback_data='survey_type_new')],
+        [InlineKeyboardButton("🚙 С пробегом до 1 года", callback_data='survey_type_1year')],
+        [InlineKeyboardButton("🚘 С пробегом до 3 лет", callback_data='survey_type_3years')],
+        [InlineKeyboardButton("🔄 Рассматриваю все варианты", callback_data='survey_type_all')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        "2️⃣ Какой автомобиль вас интересует?",
+        reply_markup=reply_markup
+    )
+    return SURVEY_CAR_TYPE
+
+async def survey_usage(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Вопрос о целях использования"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    survey_responses[user_id]['car_type'] = query.data.split('_')[-1]
+    
+    keyboard = [
+        [InlineKeyboardButton("🏢 Для работы", callback_data='survey_usage_work')],
+        [InlineKeyboardButton("👨‍👩‍👧‍👦 Для семьи", callback_data='survey_usage_family')],
+        [InlineKeyboardButton("🏃 Для активного отдыха", callback_data='survey_usage_active')],
+        [InlineKeyboardButton("🌆 Для города", callback_data='survey_usage_city')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        "3️⃣ Как планируете использовать автомобиль?",
+        reply_markup=reply_markup
+    )
+    return SURVEY_USAGE
+
+async def survey_concerns(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Вопрос о сомнениях"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    survey_responses[user_id]['usage'] = query.data.split('_')[-1]
+    
+    keyboard = [
+        [InlineKeyboardButton("🔧 Сервис и запчасти", callback_data='survey_concerns_service')],
+        [InlineKeyboardButton("💰 Остаточная стоимость", callback_data='survey_concerns_value')],
+        [InlineKeyboardButton("⚙️ Надежность", callback_data='survey_concerns_reliability')],
+        [InlineKeyboardButton("🤔 Нет сомнений", callback_data='survey_concerns_none')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        "4️⃣ Что вызывает наибольшие сомнения при выборе китайского автомобиля?",
+        reply_markup=reply_markup
+    )
+    return SURVEY_CONCERNS
+
+async def generate_promo_code(user_id: int) -> str:
+    """Генерация уникального промокода"""
+    import hashlib
+    import time
+    
+    # Создаем уникальный код на основе ID пользователя и времени
+    hash_string = f"{user_id}{time.time()}".encode()
+    hash_object = hashlib.md5(hash_string)
+    return f"ASIASTART{hash_object.hexdigest()[:6].upper()}"
+
+async def finish_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Завершение опроса"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    survey_responses[user_id]['concerns'] = query.data.split('_')[-1]
+    
+    # Генерируем промокод
+    promo_code = await generate_promo_code(user_id)
+    survey_responses[user_id]['promo_code'] = promo_code
+    
+    # Отправляем данные менеджеру
+    manager_message = (
+        f"📊 Новый заполненный опрос!\n\n"
+        f"👤 Клиент: {query.from_user.first_name} {query.from_user.last_name or ''}\n"
+        f"🆔 ID: {user_id}\n"
+        f"💬 Username: @{query.from_user.username or 'отсутствует'}\n\n"
+        f"💰 Бюджет: {survey_responses[user_id]['budget']}\n"
+        f"🚗 Тип авто: {survey_responses[user_id]['car_type']}\n"
+        f"🎯 Цель использования: {survey_responses[user_id]['usage']}\n"
+        f"❓ Сомнения: {survey_responses[user_id]['concerns']}\n"
+        f"🎁 Промокод: {promo_code}"
+    )
+    
+    try:
+        await context.bot.send_message(
+            chat_id=MANAGER_ID,
+            text=manager_message
+        )
+    except Exception as e:
+        logging.error(f"Ошибка при отправке результатов опроса менеджеру: {e}")
+
+    keyboard = [
+        [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
+        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')],
+        [InlineKeyboardButton("« Вернуться в меню", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        f"🎉 Поздравляем! Вы получили персональную скидку!\n\n"
+        f"Ваш промокод: `{promo_code}`\n\n"
+        f"💡 Сохраните промокод и предъявите его менеджеру при покупке автомобиля.\n"
+        f"⏰ Срок действия: 14 дней\n\n"
+        f"Хотите подобрать автомобиль прямо сейчас?",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+    return ConversationHandler.END
+
 
 def main():
     """Запуск бота"""
@@ -278,12 +467,33 @@ def main():
         ]
     )
 
+    # Добавляем обработчик опроса
+    survey_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(start_survey, pattern='^survey$')],
+        states={
+            SURVEY_BUDGET: [
+                CallbackQueryHandler(survey_budget, pattern='^survey_start$'),
+                CallbackQueryHandler(survey_car_type, pattern='^survey_budget_')
+            ],
+            SURVEY_CAR_TYPE: [CallbackQueryHandler(survey_usage, pattern='^survey_type_')],
+            SURVEY_USAGE: [CallbackQueryHandler(survey_concerns, pattern='^survey_usage_')],
+            SURVEY_CONCERNS: [CallbackQueryHandler(finish_survey, pattern='^survey_concerns_')]
+        },
+        fallbacks=[
+            CommandHandler('start', start),
+            CallbackQueryHandler(start, pattern='^start$')
+        ]
+    )
+    
+    application.add_handler(survey_handler)
+
     # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(car_selection, pattern='^car_selection$'))
     application.add_handler(CallbackQueryHandler(select_body_type, pattern='^budget_'))
     application.add_handler(CallbackQueryHandler(show_cars, pattern='^body_'))
     application.add_handler(contact_manager_handler)
+    application.add_handler(survey_handler) 
     application.add_handler(CallbackQueryHandler(return_to_main_menu_callback, pattern='^start$'))
 
     # Запускаем бота
