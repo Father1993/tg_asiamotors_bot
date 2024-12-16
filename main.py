@@ -5,7 +5,9 @@ from telegram import (
     InlineKeyboardMarkup,
     KeyboardButton,
     ReplyKeyboardMarkup,
-    ReplyKeyboardRemove
+    ReplyKeyboardRemove,
+    InlineQueryResultArticle,
+    InputTextMessageContent
 )
 from telegram.ext import (
     Application,
@@ -14,7 +16,8 @@ from telegram.ext import (
     MessageHandler,
     filters,
     ContextTypes,
-    ConversationHandler
+    ConversationHandler,
+    InlineQueryHandler
 )
 from dotenv import load_dotenv
 import os
@@ -78,12 +81,41 @@ cars_data = {
     }
 }
 
+# Добавляем FAQ данные
+faq_data = {
+    'delivery': {
+        'question': 'Как происходит доставка автомобиля?',
+        'answer': 'Доставка осуществляется в течение 45-60 дней. Мы предоставляем полное таможенное оформление и доставку до вашего города.'
+    },
+    'warranty': {
+        'question': 'Какая гарантия на автомобили?',
+        'answer': 'На все автомобили предоставляется гарантия 5 лет или 150,000 км пробега. Гарантийное обслуживание производится в официальных сервисных центрах.'
+    },
+    'payment': {
+        'question': 'Какие способы оплаты доступны?',
+        'answer': 'Доступна оплата наличными, банковским переводом или в кредит. Также возможна рассрочка от дилера.'
+    },
+    'service': {
+        'question': 'Где обслуживать автомобиль?',
+        'answer': 'Обслуживание проводится в официальных сервисных центрах. У нас есть сеть партнерских СТО во всех крупных городах.'
+    }
+}
+
+# Словарь для хранения избранных автомобилей пользователей
+favorites = {}
+
+# Словарь для хранения подписок на уведомления
+notifications_subscribers = set()
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начальное меню бота"""
     keyboard = [
         [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
         [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
+        [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
+        [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
         [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
+        [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
         [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -135,15 +167,21 @@ async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cars = cars_data[budget][body_type]
     
     message = "Вот что я нашёл для вас:\n\n"
-    for car in cars:
+    keyboard = []
+    
+    for i, car in enumerate(cars):
         message += f"🚘 {car['name']} {car['year']}\n💰 {car['price']:,} ₽\n\n"
+        keyboard.append([InlineKeyboardButton(
+            f"⭐️ Добавить {car['name']} в избранное",
+            callback_data=f'favorite_{budget}_{body_type}_{i}'
+        )])
     
-    keyboard = [
-        [InlineKeyboardButton("Рассчитать полную стоимость", callback_data='calculate_full_price')],
+    keyboard.extend([
+        [InlineKeyboardButton("Рассчитать полную стоимость", callback_data='calculator')],
         [InlineKeyboardButton("Вернуться в главное меню", callback_data='start')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    ])
     
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await query.answer()
     await query.message.reply_text(message, reply_markup=reply_markup)
 
@@ -158,7 +196,7 @@ async def contact_manager(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.reply_text(
-        "Пожалуйста, напишите ваш вопрос менеджеру:",
+        "Пожалуйста, напиш��те ваш вопрос менеджеру:",
         reply_markup=reply_markup
     )
     
@@ -211,7 +249,10 @@ async def process_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
             [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
+            [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
+            [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
             [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
+            [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
             [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -225,7 +266,10 @@ async def process_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [
             [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
             [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
+            [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
+            [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
             [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
+            [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
             [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -241,9 +285,12 @@ async def return_to_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Возврат в главное меню"""
     keyboard = [
         [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
-        [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
+        [InlineKeyboardButton("👨 Калькулятор стоимости", callback_data='calculator')],
+        [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
+        [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
         [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
-        [InlineKeyboardButton("👨‍💼 Задать вопрос менеджеру", callback_data='contact_manager')]
+        [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
+        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -255,18 +302,21 @@ async def return_to_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def return_to_main_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик возврата в главное меню через callback"""
     query = update.callback_query
-    await query.answer()  # Важно ответить на callback_query
+    await query.answer()
     
     keyboard = [
         [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
-        [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
+        [InlineKeyboardButton("👨 Калькулятор стоимости", callback_data='calculator')],
+        [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
+        [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
         [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
+        [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
         [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.edit_text(
-        "Выберите действие:",
+        "��ыберите действие:",
         reply_markup=reply_markup
     )
 
@@ -382,7 +432,7 @@ async def survey_concerns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.edit_text(
-        "4️⃣ Что вызывает наибольшие сомнения при выборе китайского автомобиля?",
+        "4️⃣ Что вызывает наибольшие сомнения при ��ыборе китайского автомобиля?",
         reply_markup=reply_markup
     )
     return SURVEY_CONCERNS
@@ -448,6 +498,202 @@ async def finish_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
+async def inline_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик inline-запросов для быстрого поиска автомобилей"""
+    query = update.inline_query.query.lower()
+    results = []
+    
+    # Поиск по всем автомобилям
+    for budget_category in cars_data.values():
+        for body_type in budget_category.values():
+            for car in body_type:
+                if query in car['name'].lower():
+                    results.append(
+                        InlineQueryResultArticle(
+                            id=f"{car['name']}_{car['year']}",
+                            title=f"{car['name']} ({car['year']})",
+                            description=f"Цена: {car['price']:,} ₽",
+                            input_message_content=InputTextMessageContent(
+                                message_text=f"🚗 {car['name']} {car['year']}\n"
+                                           f"💰 Цена: {car['price']:,} ₽\n"
+                                           f"Для подробной информации используйте команду /start"
+                            )
+                        )
+                    )
+    
+    await update.inline_query.answer(results[:50])
+
+async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показ FAQ раздела"""
+    keyboard = []
+    for key, data in faq_data.items():
+        keyboard.append([InlineKeyboardButton(data['question'], callback_data=f'faq_{key}')])
+    keyboard.append([InlineKeyboardButton("Вернуться в главное меню", callback_data='start')])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.message.reply_text(
+            "Часто задаваемые вопросы:",
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            "Часто задаваемые вопросы:",
+            reply_markup=reply_markup
+        )
+
+async def show_faq_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показ ответа на конкретный вопрос FAQ"""
+    query = update.callback_query
+    faq_key = query.data.split('_')[1]
+    
+    keyboard = [
+        [InlineKeyboardButton("Назад к FAQ", callback_data='faq')],
+        [InlineKeyboardButton("Вернуться в главное меню", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.answer()
+    await query.message.reply_text(
+        f"❓ {faq_data[faq_key]['question']}\n\n"
+        f"📝 {faq_data[faq_key]['answer']}",
+        reply_markup=reply_markup
+    )
+
+async def add_to_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Добавление автомобиля в избранное"""
+    query = update.callback_query
+    car_data = query.data.split('_')[1:]  # favorite_budget_bodytype_index
+    user_id = query.from_user.id
+    
+    if user_id not in favorites:
+        favorites[user_id] = []
+    
+    budget = car_data[0]
+    body_type = car_data[1]
+    car_index = int(car_data[2])
+    
+    car = cars_data[budget][body_type][car_index]
+    
+    if car not in favorites[user_id]:
+        favorites[user_id].append(car)
+        await query.answer("Автомобиль добавлен в избранное! ⭐️")
+    else:
+        await query.answer("Этот автомобиль уже в избранном!")
+
+async def show_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показ списка избранных автомобилей"""
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        user_id = query.from_user.id
+        message = query.message
+    else:
+        user_id = update.message.from_user.id
+        message = update.message
+    
+    if user_id not in favorites or not favorites[user_id]:
+        keyboard = [[InlineKeyboardButton("Вернуться в главное меню", callback_data='start')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await message.reply_text(
+            "У вас пока нет избранных автомобилей! ⭐️\n"
+            "Добавьте их при просмотре каталога.",
+            reply_markup=reply_markup
+        )
+        return
+    
+    text = "Ваши избранные автомобили:\n\n"
+    keyboard = []
+    
+    for i, car in enumerate(favorites[user_id]):
+        text += f"🚗 {car['name']} {car['year']}\n💰 {car['price']:,} ₽\n\n"
+        keyboard.append([InlineKeyboardButton(
+            f"❌ Удалить {car['name']}", 
+            callback_data=f'remove_favorite_{i}'
+        )])
+    
+    keyboard.append([InlineKeyboardButton("Вернуться в главное меню", callback_data='start')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await message.reply_text(text, reply_markup=reply_markup)
+
+async def remove_from_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Удаление автомобиля из избранного"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    index = int(query.data.split('_')[2])
+    
+    if user_id in favorites and 0 <= index < len(favorites[user_id]):
+        removed_car = favorites[user_id].pop(index)
+        await query.answer(f"{removed_car['name']} удален из избранного!")
+        await show_favorites(update, context)
+    else:
+        await query.answer("Ошибка при удалении из избранного")
+
+async def toggle_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Включение/выключение уведомлений о новых моделях"""
+    query = update.callback_query
+    user_id = query.from_user.id
+    
+    if user_id in notifications_subscribers:
+        notifications_subscribers.remove(user_id)
+        await query.answer("Уведомления отключены! 🔕")
+    else:
+        notifications_subscribers.add(user_id)
+        await query.answer("Уведомления включены! 🔔")
+    
+    await show_notification_settings(update, context)
+
+async def show_notification_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показ настроек уведомлений"""
+    if update.callback_query:
+        query = update.callback_query
+        user_id = query.from_user.id
+        message = query.message
+    else:
+        user_id = update.message.from_user.id
+        message = update.message
+    
+    status = "включ��ны 🔔" if user_id in notifications_subscribers else "выключены 🔕"
+    
+    keyboard = [
+        [InlineKeyboardButton(
+            "Выключить уведомления 🔕" if user_id in notifications_subscribers else "Включить уведомления 🔔",
+            callback_data='toggle_notifications'
+        )],
+        [InlineKeyboardButton("Вернуться в главное меню", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await message.reply_text(
+        f"Настройки уведомлений\n\n"
+        f"Статус: {status}\n\n"
+        f"При включенных уведомлениях вы будете получать информацию о:\n"
+        f"• Новых моделях автомобилей\n"
+        f"• Специальных предложениях\n"
+        f"• Изменениях цен",
+        reply_markup=reply_markup
+    )
+
+async def notify_about_new_car(context: ContextTypes.DEFAULT_TYPE, car_info: dict):
+    """Отправка уведомления о новой модели всем подписчикам"""
+    message = (
+        f"🆕 Новая модель в каталоге!\n\n"
+        f"🚗 {car_info['name']} {car_info['year']}\n"
+        f"💰 Цена: {car_info['price']:,} ₽\n\n"
+        f"Нажмите /start чтобы узнать подробнее"
+    )
+    
+    for user_id in notifications_subscribers:
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=message
+            )
+        except Exception as e:
+            logging.error(f"Ошибка при отправке уведомления пользователю {user_id}: {e}")
 
 def main():
     """Запуск бота"""
@@ -495,6 +741,14 @@ def main():
     application.add_handler(contact_manager_handler)
     application.add_handler(survey_handler) 
     application.add_handler(CallbackQueryHandler(return_to_main_menu_callback, pattern='^start$'))
+    application.add_handler(InlineQueryHandler(inline_search))  # Добавляем обработчик inline-запросов
+    application.add_handler(CallbackQueryHandler(show_faq, pattern='^faq$'))
+    application.add_handler(CallbackQueryHandler(show_faq_answer, pattern='^faq_.*$'))
+    application.add_handler(CallbackQueryHandler(show_favorites, pattern='^favorites$'))
+    application.add_handler(CallbackQueryHandler(add_to_favorites, pattern='^favorite_.*$'))
+    application.add_handler(CallbackQueryHandler(remove_from_favorites, pattern='^remove_favorite_.*$'))
+    application.add_handler(CallbackQueryHandler(show_notification_settings, pattern='^notifications$'))
+    application.add_handler(CallbackQueryHandler(toggle_notifications, pattern='^toggle_notifications$'))
 
     # Запускаем бота
     application.run_polling()
