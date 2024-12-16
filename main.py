@@ -30,6 +30,8 @@ TOKEN = os.getenv('TELEGRAM_TOKEN')
 
 # ID менеджера
 MANAGER_ID = os.getenv('TELEGRAM_MANAGER_ID')
+# Username менеджера
+MANAGER_USERNAME = os.getenv('TELEGRAM_MANAGER_USERNAME')
 
 # Логирование
 logging.basicConfig(
@@ -97,7 +99,7 @@ faq_data = {
     },
     'service': {
         'question': 'Где обслуживать автомобиль?',
-        'answer': 'Обслуживание проводится в официальных сервисных центрах. У нас есть сеть партнерских СТО во всех крупных городах.'
+        'answer': 'Обслужив��ние проводится в официальных сервисных центрах. У нас есть сеть партнерских СТО во всех крупных городах.'
     }
 }
 
@@ -107,6 +109,21 @@ favorites = {}
 # Словарь для хранения подписок на уведомления
 notifications_subscribers = set()
 
+# Данные для калькулятора
+calculator_data = {
+    'additional_options': {
+        'winter': {'name': '❄️ Зимний пакет', 'price': 150000},
+        'security': {'name': '🔐 Пакет безопасности', 'price': 200000},
+        'multimedia': {'name': '🎵 Мультимедиа пакет', 'price': 180000},
+        'comfort': {'name': '💺 Пакет комфорта', 'price': 250000}
+    },
+    'services': {
+        'insurance': {'name': '📋 Страховка КАСКО', 'price': 120000},
+        'registration': {'name': '📝 Регистрация авто', 'price': 35000},
+        'delivery': {'name': '🚛 Доставка', 'price': 150000}
+    }
+}
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начальное меню бота"""
     keyboard = [
@@ -114,9 +131,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
         [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
         [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
-        [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
+        [InlineKeyboardButton("📋 Опрос за подарок - 10 000₽!", callback_data='survey')],
+        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')],
         [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
-        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
@@ -232,7 +249,7 @@ async def process_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Формируем сообщение для менеджера
     manager_message = (
-        f"❗️ Новая заявка на консультацию ❗️\n\n"
+        f"❗️ Новая за��вка на консультацию ❗️\n\n"
         f"👤 Клиент: {user.first_name} {user.last_name or ''}\n"
         f"🆔 ID: {user.id}\n"
         f"💬 Username: @{user.username or 'отсутствует'}\n\n"
@@ -437,7 +454,7 @@ async def survey_concerns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return SURVEY_CONCERNS
 
 async def generate_promo_code(user_id: int) -> str:
-    """Генерация уникального промокода"""
+    """Генерация уника��ьного промокода"""
     import hashlib
     import time
     
@@ -466,7 +483,7 @@ async def finish_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💬 Username: @{query.from_user.username or 'отсутствует'}\n\n"
         f"💰 Бюджет: {survey_responses[user_id]['budget']}\n"
         f"🚗 Тип авто: {survey_responses[user_id]['car_type']}\n"
-        f"🎯 Цель использования: {survey_responses[user_id]['usage']}\n"
+        f"��� Цель использования: {survey_responses[user_id]['usage']}\n"
         f"❓ Сомнения: {survey_responses[user_id]['concerns']}\n"
         f"🎁 Промокод: {promo_code}"
     )
@@ -491,7 +508,7 @@ async def finish_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Ваш промокод: `{promo_code}`\n\n"
         f"💡 Сохраните промокод и предъявите его менеджеру при покупке автомобиля.\n"
         f"⏰ Срок действия: 14 дней\n\n"
-        f"Хотите подобрать автомобиль прямо сейчас?",
+        f"Хотите под��брать автомобиль прямо сейчас?",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -694,6 +711,181 @@ async def notify_about_new_car(context: ContextTypes.DEFAULT_TYPE, car_info: dic
         except Exception as e:
             logging.error(f"Ошибка при отправке уведомления пользователю {user_id}: {e}")
 
+async def start_calculator(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Начало работы калькулятора"""
+    query = update.callback_query
+    await query.answer()
+    
+    # Очищаем предыдущие данные калькулятора
+    context.user_data.clear()
+    context.user_data['calculator'] = {
+        'base_price': 0,
+        'options': set(),
+        'services': set(),
+        'total': 0
+    }
+    
+    keyboard = [
+        [InlineKeyboardButton("До 1.5 млн ₽", callback_data='calc_1500000')],
+        [InlineKeyboardButton("1.5 - 2.5 млн ₽", callback_data='calc_2500000')],
+        [InlineKeyboardButton("2.5 - 3.5 млн ₽", callback_data='calc_3500000')],
+        [InlineKeyboardButton("« Вернуться в меню", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.edit_text(
+        "🧮 Калькулятор стоимости\n\n"
+        "Давайте рассчитаем полную стоимость автомобиля.\n"
+        "Для начала выберите базовую стоимость:",
+        reply_markup=reply_markup
+    )
+
+async def select_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Выбор дополнительных опций"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data.startswith('calc_'):
+        # Получаем базовую цену
+        base_price = int(query.data.split('_')[1])
+        context.user_data['calculator']['base_price'] = base_price
+    
+    # Формируем клавиатуру с опциями
+    keyboard = []
+    calc_data = context.user_data['calculator']
+    
+    for option_id, option in calculator_data['additional_options'].items():
+        checkbox = '✅' if option_id in calc_data['options'] else '⬜️'
+        keyboard.append([InlineKeyboardButton(
+            f"{checkbox} {option['name']} (+{option['price']:,} ₽)",
+            callback_data=f'option_{option_id}'
+        )])
+    
+    keyboard.append([InlineKeyboardButton("➡️ Далее", callback_data='calc_services')])
+    keyboard.append([InlineKeyboardButton("« Вернуться в меню", callback_data='start')])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    total = calc_data['base_price']
+    for opt in calc_data['options']:
+        total += calculator_data['additional_options'][opt]['price']
+    
+    context.user_data['calculator']['total'] = total
+    
+    await query.message.edit_text(
+        "🛠 Выберите дополнительные опции:\n\n"
+        f"Базовая стоимость: {calc_data['base_price']:,} ₽\n"
+        f"Стоимость опций: {(total - calc_data['base_price']):,} ₽\n"
+        f"Итого: {total:,} ₽",
+        reply_markup=reply_markup
+    )
+
+async def select_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Выбор дополнительных услуг"""
+    query = update.callback_query
+    await query.answer()
+    
+    calc_data = context.user_data['calculator']
+    
+    if query.data.startswith('option_'):
+        # Обработка выбора опции
+        option_id = query.data.split('_')[1]
+        if option_id in calc_data['options']:
+            calc_data['options'].remove(option_id)
+        else:
+            calc_data['options'].add(option_id)
+        return await select_options(update, context)
+    
+    if query.data.startswith('service_'):
+        # Обработка выбора услуги
+        service_id = query.data.split('_')[1]
+        if service_id in calc_data['services']:
+            calc_data['services'].remove(service_id)
+        else:
+            calc_data['services'].add(service_id)
+    
+    # Формируем клавиатуру с услугами
+    keyboard = []
+    
+    for service_id, service in calculator_data['services'].items():
+        checkbox = '✅' if service_id in calc_data['services'] else '⬜️'
+        keyboard.append([InlineKeyboardButton(
+            f"{checkbox} {service['name']} (+{service['price']:,} ₽)",
+            callback_data=f'service_{service_id}'
+        )])
+    
+    keyboard.append([InlineKeyboardButton("📊 Показать итог", callback_data='calc_result')])
+    keyboard.append([InlineKeyboardButton("« Вернуться к опциям", callback_data='calc_back_options')])
+    keyboard.append([InlineKeyboardButton("« Вернуться в меню", callback_data='start')])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # Подсчет общей стоимости
+    total = calc_data['base_price']
+    options_cost = sum(calculator_data['additional_options'][opt]['price'] for opt in calc_data['options'])
+    services_cost = sum(calculator_data['services'][srv]['price'] for srv in calc_data['services'])
+    total += options_cost + services_cost
+    
+    context.user_data['calculator']['total'] = total
+    
+    await query.message.edit_text(
+        "🛎 Выберите дополнительные услуги:\n\n"
+        f"Базовая стоимость: {calc_data['base_price']:,} ₽\n"
+        f"Стоимость опций: {options_cost:,} ₽\n"
+        f"Стоимость услуг: {services_cost:,} ₽\n"
+        f"Итого: {total:,} ₽",
+        reply_markup=reply_markup
+    )
+
+async def show_calculator_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Показ итоговой стоимости"""
+    query = update.callback_query
+    await query.answer()
+    
+    calc_data = context.user_data['calculator']
+    
+    # Формируем детальный отчет
+    options_text = ""
+    if calc_data['options']:
+        options_text = "Выбранные опции:\n" + "\n".join(
+            f"• {calculator_data['additional_options'][opt]['name']}: {calculator_data['additional_options'][opt]['price']:,} ₽"
+            for opt in calc_data['options']
+        ) + "\n\n"
+    
+    services_text = ""
+    if calc_data['services']:
+        services_text = "Выбранные услуги:\n" + "\n".join(
+            f"• {calculator_data['services'][srv]['name']}: {calculator_data['services'][srv]['price']:,} ₽"
+            for srv in calc_data['services']
+        ) + "\n\n"
+    
+    # Подсчет стоимости
+    options_cost = sum(calculator_data['additional_options'][opt]['price'] for opt in calc_data['options'])
+    services_cost = sum(calculator_data['services'][srv]['price'] for srv in calc_data['services'])
+    total = calc_data['base_price'] + options_cost + services_cost
+    
+    keyboard = [
+        [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
+        [InlineKeyboardButton("🔄 Новый расчет", callback_data='calculator')],
+        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')],
+        [InlineKeyboardButton("« Вернуться в меню", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # Создаем ссылку на менеджера
+    manager_link = f'<a href="https://t.me/{MANAGER_USERNAME}">менеджера</a>' if MANAGER_USERNAME else 'менеджера'
+    
+    await query.message.edit_text(
+        "📊 Итоговый расчет стоимости:\n\n"
+        f"Базовая стоимость: {calc_data['base_price']:,} ₽\n\n"
+        f"{options_text}"
+        f"{services_text}"
+        f"Итоговая стоимость: {total:,} ₽\n\n"
+        f"💡 Точную стоимость автомобиля с учетом всех акций и скидок вы можете узнать у {manager_link}.",
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
 def main():
     """Запуск бота"""
     application = Application.builder().token(TOKEN).build()
@@ -748,6 +940,13 @@ def main():
     application.add_handler(CallbackQueryHandler(remove_from_favorites, pattern='^remove_favorite_.*$'))
     application.add_handler(CallbackQueryHandler(show_notification_settings, pattern='^notifications$'))
     application.add_handler(CallbackQueryHandler(toggle_notifications, pattern='^toggle_notifications$'))
+    application.add_handler(CallbackQueryHandler(start_calculator, pattern='^calculator$'))
+    application.add_handler(CallbackQueryHandler(select_options, pattern='^calc_[0-9]+$'))
+    application.add_handler(CallbackQueryHandler(select_options, pattern='^calc_back_options$'))
+    application.add_handler(CallbackQueryHandler(select_services, pattern='^calc_services$'))
+    application.add_handler(CallbackQueryHandler(select_services, pattern='^option_'))
+    application.add_handler(CallbackQueryHandler(select_services, pattern='^service_'))
+    application.add_handler(CallbackQueryHandler(show_calculator_result, pattern='^calc_result$'))
 
     # Запускаем бота
     application.run_polling()
