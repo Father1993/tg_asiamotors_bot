@@ -196,7 +196,7 @@ async def contact_manager(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.reply_text(
-        "Пожалуйста, напиш��те ваш вопрос менеджеру:",
+        "Пожалуйста, напишите ваш вопрос менеджеру:",
         reply_markup=reply_markup
     )
     
@@ -316,7 +316,7 @@ async def return_to_main_menu_callback(update: Update, context: ContextTypes.DEF
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.edit_text(
-        "��ыберите действие:",
+        "Выберите действие:",
         reply_markup=reply_markup
     )
 
@@ -346,7 +346,6 @@ async def start_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⏱ Это займет всего 2-3 минуты.",
         reply_markup=reply_markup
     )
-    return SURVEY_BUDGET
 
 async def survey_budget(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Вопрос о бюджете"""
@@ -432,7 +431,7 @@ async def survey_concerns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.message.edit_text(
-        "4️⃣ Что вызывает наибольшие сомнения при ��ыборе китайского автомобиля?",
+        "4️⃣ Что вызывает наибольшие сомнения при выборе китайского автомобиля?",
         reply_markup=reply_markup
     )
     return SURVEY_CONCERNS
@@ -656,7 +655,7 @@ async def show_notification_settings(update: Update, context: ContextTypes.DEFAU
         user_id = update.message.from_user.id
         message = update.message
     
-    status = "включ��ны 🔔" if user_id in notifications_subscribers else "выключены 🔕"
+    status = "включены 🔔" if user_id in notifications_subscribers else "выключены 🔕"
     
     keyboard = [
         [InlineKeyboardButton(
@@ -709,7 +708,7 @@ def main():
         },
         fallbacks=[
             CommandHandler('start', start),
-            CallbackQueryHandler(start, pattern='^start$')
+            CallbackQueryHandler(return_to_main_menu_callback, pattern='^start$')
         ]
     )
 
@@ -727,21 +726,21 @@ def main():
         },
         fallbacks=[
             CommandHandler('start', start),
-            CallbackQueryHandler(start, pattern='^start$')
-        ]
+            CallbackQueryHandler(return_to_main_menu_callback, pattern='^start$'),
+            CallbackQueryHandler(start_survey, pattern='^survey$')
+        ],
+        allow_reentry=True
     )
     
-    application.add_handler(survey_handler)
-
     # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(car_selection, pattern='^car_selection$'))
     application.add_handler(CallbackQueryHandler(select_body_type, pattern='^budget_'))
     application.add_handler(CallbackQueryHandler(show_cars, pattern='^body_'))
     application.add_handler(contact_manager_handler)
-    application.add_handler(survey_handler) 
+    application.add_handler(survey_handler)
     application.add_handler(CallbackQueryHandler(return_to_main_menu_callback, pattern='^start$'))
-    application.add_handler(InlineQueryHandler(inline_search))  # Добавляем обработчик inline-запросов
+    application.add_handler(InlineQueryHandler(inline_search))
     application.add_handler(CallbackQueryHandler(show_faq, pattern='^faq$'))
     application.add_handler(CallbackQueryHandler(show_faq_answer, pattern='^faq_.*$'))
     application.add_handler(CallbackQueryHandler(show_favorites, pattern='^favorites$'))
