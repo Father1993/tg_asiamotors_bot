@@ -1,4 +1,5 @@
 import logging
+import random
 from telegram import (
     Update, 
     InlineKeyboardButton, 
@@ -61,7 +62,7 @@ logger = logging.getLogger(__name__)
 survey_responses = {}
 # словарь для хранения состояний пользователей
 user_states = {}
-# Словарь для хранения избранных автомо��илей пользователей
+# Словарь для хранения избранных автомобилей пользователей
 favorites = {}
 # Словарь для хранения подписок на уведомления
 notifications_subscribers = set()
@@ -108,33 +109,51 @@ async def car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.callback_query.answer()
-    await update.callback_query.message.reply_text(
-        "Какой у вас бюджет? 💰",
-        reply_markup=reply_markup
-    )
+    
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.message.reply_text(
+            "Какой у вас бюджет? 💰",
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            "Какой у вас бюджет? 💰",
+            reply_markup=reply_markup
+        )
 
 async def select_body_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Выбор типа кузова"""
     query = update.callback_query
-    budget = query.data.split('_')[1]  # получаем economy, medium или premium
+    budget = query.data.split('_')[1]
     user_states[query.from_user.id] = {'budget': budget}
     
     keyboard = [
         [
-            InlineKeyboardButton("Седан", callback_data=f'body_Седаны_{budget}'),
-            InlineKeyboardButton("Кроссовер", callback_data=f'body_Кроссоверы_{budget}')
+            InlineKeyboardButton("Седан", callback_data=f'body_sedan_{budget}'),
+            InlineKeyboardButton("Кроссовер", callback_data=f'body_crossover_{budget}')
+        ],
+        [
+            InlineKeyboardButton("Минивэн", callback_data=f'body_minivan_{budget}'),
+            InlineKeyboardButton("Внедорожник", callback_data=f'body_suv_{budget}')
+        ],
+        [
+            InlineKeyboardButton("Электромобиль", callback_data=f'body_electric_{budget}')
+        ],
+        [
+            InlineKeyboardButton("« Назад", callback_data='car_selection')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await query.answer()
-    await query.message.reply_text(
+    await query.message.edit_text(
         "Выберите тип кузова: 🚗",
         reply_markup=reply_markup
     )
 
 async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Показ подходящих автомобилей"""
+    """Показ подходящих автомобилей (только 3 случайных)"""
     query = update.callback_query
     body_type, budget = query.data.split('_')[1:]
     
@@ -148,7 +167,15 @@ async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    for car in filtered_cars:
+    # Выбираем случайные 3 автомобиля
+    selected_cars = random.sample(filtered_cars, min(3, len(filtered_cars)))
+    
+    await query.answer()
+    await query.message.reply_text(
+        f"Нашел для вас {len(selected_cars)} подходящих варианта 🚗"
+    )
+    
+    for car in selected_cars:
         # Формируем описание автомобиля
         message = (
             f"🚘 {car['brand']} {car['model']} {car['year']}\n"
@@ -182,7 +209,8 @@ async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Отправляем фотографии
         if car['images']:
             media_group = []
-            for image_path in car['images'][:10]:  # Ограничиваем до 10 фото
+            # Ограничиваем количество фотографий до 5 для каждого автомобиля
+            for image_path in car['images'][:5]:
                 try:
                     # Преобразуем веб-путь в локальный путь
                     local_path = f"data{image_path}"
@@ -197,7 +225,31 @@ async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception as e:
                     logging.error(f"Ошибка при отправке медиагруппы: {e}")
     
-    await query.answer()
+        # Добавляем кнопки после показа всех автомобилей
+        keyboard = []
+        
+        # Добавляем кнопку "Показать еще" только если есть дополнительные автомобили
+        if len(filtered_cars) > 3:
+            keyboard.append([
+                InlineKeyboardButton(
+                    "🔄 Показать другие варианты",
+                    callback_data=f"body_{body_type}_{budget}"
+                )
+            ])
+        
+        # Всегда добавляем кнопку возврата в меню
+        keyboard.append([
+            InlineKeyboardButton(
+                "« Вернуться в меню",
+                callback_data='start'
+            )
+        ])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.reply_text(
+            "Выберите действие:",
+            reply_markup=reply_markup
+        )
 
 async def contact_manager(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик для связи с менеджером"""
@@ -341,7 +393,7 @@ async def start_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"Starting survey for user {query.from_user.id}")
     
-    # Инициа��изируем хранение ответов пользователя
+    # Инициализируем хранение ответов пользователя
     user_id = query.from_user.id
     survey_responses[user_id] = {}
     
@@ -617,7 +669,7 @@ async def show_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    text = "Ваши избр��нные автомобили:\n\n"
+    text = "Ваши избранные автомобили:\n\n"
     keyboard = []
     
     for i, car in enumerate(favorites[user_id]):
@@ -676,7 +728,7 @@ async def show_notification_settings(update: Update, context: ContextTypes.DEFAU
             "Выключить уведомления 🔕" if user_id in notifications_subscribers else "Включить уведомления 🔔",
             callback_data='toggle_notifications'
         )],
-        [InlineKeyboardButton("Вер��уться в главное меню", callback_data='start')]
+        [InlineKeyboardButton("Вернуться в главное меню", callback_data='start')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
