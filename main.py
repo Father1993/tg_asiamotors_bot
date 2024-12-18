@@ -195,10 +195,6 @@ async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton(
                 f"⭐️ Добавить {car['brand']} {car['model']} в избранное",
                 callback_data=f"favorite_{car['id']}"
-            )],
-            [InlineKeyboardButton(
-                "💰 Рассчитать полную стоимость",
-                callback_data='calculator'
             )]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
