@@ -22,7 +22,7 @@ from telegram.ext import (
 from dotenv import load_dotenv
 import os
 import json
-import pandas as pd
+from data import catalog, faq_data
 
 # переменные окружения
 load_dotenv()
@@ -58,54 +58,8 @@ logger = logging.getLogger(__name__)
 survey_responses = {}
 # словарь для хранения состояний пользователей
 user_states = {}
-
-# Данные об автомобилях
-cars_data = {
-    'economy': {
-        'sedan': [
-            {'name': 'Geely Emgrand', 'price': 1450000, 'year': 2023},
-            {'name': 'Chery Arrizo', 'price': 1350000, 'year': 2023}
-        ],
-        'crossover': [
-            {'name': 'Haval Jolion', 'price': 1850000, 'year': 2023},
-            {'name': 'Chery Tiggo 4', 'price': 1750000, 'year': 2023}
-        ]
-    },
-    'medium': {
-        'sedan': [
-            {'name': 'GAC Empow', 'price': 2450000, 'year': 2023},
-            {'name': 'Chery Arrizo 8', 'price': 2350000, 'year': 2023}
-        ],
-        'crossover': [
-            {'name': 'Haval F7', 'price': 2850000, 'year': 2023},
-            {'name': 'Geely Atlas Pro', 'price': 2650000, 'year': 2023}
-        ]
-    }
-}
-
-# Добавляем FAQ данные
-faq_data = {
-    'delivery': {
-        'question': 'Как происходит доставка автомобиля?',
-        'answer': 'Доставка осуществляется в течение 45-60 дней. Мы предоставляем полное таможенное оформление и доставку до вашего города.'
-    },
-    'warranty': {
-        'question': 'Какая гарантия на автомобили?',
-        'answer': 'На все автомобили предоставляется гарантия 5 лет или 150,000 км пробега. Гарантийное обслуживание производится в официальных сервисных центрах.'
-    },
-    'payment': {
-        'question': 'Какие способы оплаты доступны?',
-        'answer': 'Доступна оплата наличными, банковским переводом или в кредит. Также возможна рассрочка от дилера.'
-    },
-    'service': {
-        'question': 'Где обслуживать автомобиль?',
-        'answer': 'Обслужив��ние проводится в официальных сервисных центрах. У нас есть сеть партнерских СТО во всех крупных городах.'
-    }
-}
-
 # Словарь для хранения избранных автомобилей пользователей
 favorites = {}
-
 # Словарь для хранения подписок на уведомления
 notifications_subscribers = set()
 
@@ -132,7 +86,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
         [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
         [InlineKeyboardButton("📋 Опрос за подарок - 10 000₽!", callback_data='survey')],
-        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')],
+        [InlineKeyboardButton("👨‍💼 Свя��аться с менеджером", callback_data='contact_manager')],
         [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -181,7 +135,7 @@ async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     body_type, budget = query.data.split('_')[1:]
     
-    cars = cars_data[budget][body_type]
+    cars = catalog[budget][body_type]
     
     message = "Вот что я нашёл для вас:\n\n"
     keyboard = []
@@ -454,7 +408,7 @@ async def survey_concerns(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return SURVEY_CONCERNS
 
 async def generate_promo_code(user_id: int) -> str:
-    """Генерация уника��ьного промокода"""
+    """Генерация уникального промокода"""
     import hashlib
     import time
     
@@ -483,7 +437,7 @@ async def finish_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💬 Username: @{query.from_user.username or 'отсутствует'}\n\n"
         f"💰 Бюджет: {survey_responses[user_id]['budget']}\n"
         f"🚗 Тип авто: {survey_responses[user_id]['car_type']}\n"
-        f"��� Цель использования: {survey_responses[user_id]['usage']}\n"
+        f"💬 Цель использования: {survey_responses[user_id]['usage']}\n"
         f"❓ Сомнения: {survey_responses[user_id]['concerns']}\n"
         f"🎁 Промокод: {promo_code}"
     )
@@ -508,7 +462,7 @@ async def finish_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Ваш промокод: `{promo_code}`\n\n"
         f"💡 Сохраните промокод и предъявите его менеджеру при покупке автомобиля.\n"
         f"⏰ Срок действия: 14 дней\n\n"
-        f"Хотите под��брать автомобиль прямо сейчас?",
+        f"Хотите подбрать автомобиль прямо сейчас?",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -520,7 +474,7 @@ async def inline_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     results = []
     
     # Поиск по всем автомобилям
-    for budget_category in cars_data.values():
+    for budget_category in catalog.values():
         for body_type in budget_category.values():
             for car in body_type:
                 if query in car['name'].lower():
@@ -581,17 +535,17 @@ async def show_faq_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def add_to_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Добавление автомобиля в избранное"""
     query = update.callback_query
-    car_data = query.data.split('_')[1:]  # favorite_budget_bodytype_index
+    catalog = query.data.split('_')[1:]  # favorite_budget_bodytype_index
     user_id = query.from_user.id
     
     if user_id not in favorites:
         favorites[user_id] = []
     
-    budget = car_data[0]
-    body_type = car_data[1]
-    car_index = int(car_data[2])
+    budget = catalog[0]
+    body_type = catalog[1]
+    car_index = int(catalog[2])
     
-    car = cars_data[budget][body_type][car_index]
+    car = catalog[budget][body_type][car_index]
     
     if car not in favorites[user_id]:
         favorites[user_id].append(car)
@@ -694,7 +648,7 @@ async def show_notification_settings(update: Update, context: ContextTypes.DEFAU
     )
 
 async def notify_about_new_car(context: ContextTypes.DEFAULT_TYPE, car_info: dict):
-    """Отправка уведомления о новой модели всем подписчикам"""
+    """��тправка уведомления о новой модели всем подписчикам"""
     message = (
         f"🆕 Новая модель в каталоге!\n\n"
         f"🚗 {car_info['name']} {car_info['year']}\n"
@@ -788,7 +742,7 @@ async def select_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     calc_data = context.user_data['calculator']
     
     if query.data.startswith('option_'):
-        # Обработка выбора опции
+        # Обработка ��ыбора опции
         option_id = query.data.split('_')[1]
         if option_id in calc_data['options']:
             calc_data['options'].remove(option_id)
@@ -804,7 +758,7 @@ async def select_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             calc_data['services'].add(service_id)
     
-    # Формируем клавиатуру с услугами
+    # Форм��руем клавиатуру с услугами
     keyboard = []
     
     for service_id, service in calculator_data['services'].items():

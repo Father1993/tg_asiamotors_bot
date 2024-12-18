@@ -7,6 +7,8 @@ env/
 # Временные и служебные файлы
 bot.txt
 
+data/__pycache__/
+
 # Python
 __pycache__/
 *.py[cod]
