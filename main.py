@@ -7,7 +7,8 @@ from telegram import (
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
     InlineQueryResultArticle,
-    InputTextMessageContent
+    InputTextMessageContent,
+    InputMediaPhoto
 )
 from telegram.ext import (
     Application,
@@ -22,7 +23,9 @@ from telegram.ext import (
 from dotenv import load_dotenv
 import os
 import json
-from data import catalog, faq_data
+from data.catalog import get_filtered_cars, cars_data, categories, price_ranges, countries
+from data import faq_data
+
 
 # переменные окружения
 load_dotenv()
@@ -58,7 +61,7 @@ logger = logging.getLogger(__name__)
 survey_responses = {}
 # словарь для хранения состояний пользователей
 user_states = {}
-# Словарь для хранения избранных автомобилей пользователей
+# Словарь для хранения избранных автомо��илей пользователей
 favorites = {}
 # Словарь для хранения подписок на уведомления
 notifications_subscribers = set()
@@ -86,7 +89,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
         [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
         [InlineKeyboardButton("📋 Опрос за подарок - 10 000₽!", callback_data='survey')],
-        [InlineKeyboardButton("👨‍💼 Свя��аться с менеджером", callback_data='contact_manager')],
+        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')],
         [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -114,13 +117,13 @@ async def car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def select_body_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Выбор типа кузова"""
     query = update.callback_query
-    budget = query.data.split('_')[1]
+    budget = query.data.split('_')[1]  # получаем economy, medium или premium
     user_states[query.from_user.id] = {'budget': budget}
     
     keyboard = [
         [
-            InlineKeyboardButton("Седан", callback_data=f'body_sedan_{budget}'),
-            InlineKeyboardButton("Кроссовер", callback_data=f'body_crossover_{budget}')
+            InlineKeyboardButton("Седан", callback_data=f'body_Седаны_{budget}'),
+            InlineKeyboardButton("Кроссовер", callback_data=f'body_Кроссоверы_{budget}')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -135,26 +138,66 @@ async def show_cars(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     body_type, budget = query.data.split('_')[1:]
     
-    cars = catalog[budget][body_type]
+    # Получаем отфильтрованные автомобили
+    filtered_cars = get_filtered_cars(price_range=budget, category=body_type)
     
-    message = "Вот что я нашёл для вас:\n\n"
-    keyboard = []
+    if not filtered_cars:
+        await query.answer()
+        await query.message.reply_text(
+            "К сожалению, не найдено автомобилей по вашим критериям 😔"
+        )
+        return
     
-    for i, car in enumerate(cars):
-        message += f"🚘 {car['name']} {car['year']}\n💰 {car['price']:,} ₽\n\n"
-        keyboard.append([InlineKeyboardButton(
-            f"⭐️ Добавить {car['name']} в избранное",
-            callback_data=f'favorite_{budget}_{body_type}_{i}'
-        )])
+    for car in filtered_cars:
+        # Формируем описание автомобиля
+        message = (
+            f"🚘 {car['brand']} {car['model']} {car['year']}\n"
+            f"💰 {car['price']:,} ₽\n"
+            f"🛣 Пробег: {car['specs']['mileage']} км\n"
+            f"🔧 Двигатель: {car['specs']['engine_volume']}л, {car['specs']['fuel_type']}\n"
+            f"⚡️ Мощность: {car['specs']['horse_power']} л.с.\n"
+            f"🔄 КПП: {car['specs']['transmission']}\n"
+            f"🚙 Привод: {car['specs']['drive_type']}\n"
+        )
+        
+        if 'features' in car['specs']:
+            message += "✨ Особенности: " + ", ".join(car['specs']['features']) + "\n"
+        
+        # Создаем клавиатуру для каждого автомобиля
+        keyboard = [
+            [InlineKeyboardButton(
+                f"⭐️ Добавить {car['brand']} {car['model']} в избранное",
+                callback_data=f"favorite_{car['id']}"
+            )],
+            [InlineKeyboardButton(
+                "💰 Рассчитать полную стоимость",
+                callback_data='calculator'
+            )]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Отправляем описание автомобиля
+        await query.message.reply_text(message, reply_markup=reply_markup)
+        
+        # Отправляем фотографии
+        if car['images']:
+            media_group = []
+            for image_path in car['images'][:10]:  # Ограничиваем до 10 фото
+                try:
+                    # Преобразуем веб-путь в локальный путь
+                    local_path = f"data{image_path}"
+                    media_group.append(InputMediaPhoto(media=open(local_path, 'rb')))
+                except Exception as e:
+                    logging.error(f"Ошибка при загрузке изображения {image_path}: {e}")
+                    continue
+            
+            if media_group:
+                try:
+                    await query.message.reply_media_group(media=media_group)
+                except Exception as e:
+                    logging.error(f"Ошибка при отправке медиагруппы: {e}")
     
-    keyboard.extend([
-        [InlineKeyboardButton("Рассчитать полную стоимость", callback_data='calculator')],
-        [InlineKeyboardButton("Вернуться в главное меню", callback_data='start')]
-    ])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
     await query.answer()
-    await query.message.reply_text(message, reply_markup=reply_markup)
 
 async def contact_manager(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик для связи с менеджером"""
@@ -203,7 +246,7 @@ async def process_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Формируем сообщение для менеджера
     manager_message = (
-        f"❗️ Новая за��вка на консультацию ❗️\n\n"
+        f"❗️ Новая завка на консультацию ❗️\n\n"
         f"👤 Клиент: {user.first_name} {user.last_name or ''}\n"
         f"🆔 ID: {user.id}\n"
         f"💬 Username: @{user.username or 'отсутствует'}\n\n"
@@ -298,7 +341,7 @@ async def start_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     logger.info(f"Starting survey for user {query.from_user.id}")
     
-    # Инициализируем хранение ответов пользователя
+    # Инициа��изируем хранение ответов пользователя
     user_id = query.from_user.id
     survey_responses[user_id] = {}
     
@@ -574,7 +617,7 @@ async def show_favorites(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    text = "Ваши избранные автомобили:\n\n"
+    text = "Ваши избр��нные автомобили:\n\n"
     keyboard = []
     
     for i, car in enumerate(favorites[user_id]):
@@ -633,7 +676,7 @@ async def show_notification_settings(update: Update, context: ContextTypes.DEFAU
             "Выключить уведомления 🔕" if user_id in notifications_subscribers else "Включить уведомления 🔔",
             callback_data='toggle_notifications'
         )],
-        [InlineKeyboardButton("Вернуться в главное меню", callback_data='start')]
+        [InlineKeyboardButton("Вер��уться в главное меню", callback_data='start')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -648,7 +691,7 @@ async def show_notification_settings(update: Update, context: ContextTypes.DEFAU
     )
 
 async def notify_about_new_car(context: ContextTypes.DEFAULT_TYPE, car_info: dict):
-    """��тправка уведомления о новой модели всем подписчикам"""
+    """тправка уведомления о новой модели всем подписчикам"""
     message = (
         f"🆕 Новая модель в каталоге!\n\n"
         f"🚗 {car_info['name']} {car_info['year']}\n"
@@ -742,7 +785,7 @@ async def select_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
     calc_data = context.user_data['calculator']
     
     if query.data.startswith('option_'):
-        # Обработка ��ыбора опции
+        # Обработка ыбора опции
         option_id = query.data.split('_')[1]
         if option_id in calc_data['options']:
             calc_data['options'].remove(option_id)
@@ -758,7 +801,7 @@ async def select_services(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             calc_data['services'].add(service_id)
     
-    # Форм��руем клавиатуру с услугами
+    # Форруем клавиатуру с услугами
     keyboard = []
     
     for service_id, service in calculator_data['services'].items():
@@ -835,10 +878,27 @@ async def show_calculator_result(update: Update, context: ContextTypes.DEFAULT_T
         f"{options_text}"
         f"{services_text}"
         f"Итоговая стоимость: {total:,} ₽\n\n"
-        f"💡 Точную стоимость автомобиля с учетом всех акций и скидок вы можете узнать у {manager_link}.",
+        f"💡 Точную стоимость автомоиля с учетом всех акций и скидок вы можете узнать у {manager_link}.",
         reply_markup=reply_markup,
         parse_mode='HTML'
     )
+
+async def send_car_photos(update: Update, context: ContextTypes.DEFAULT_TYPE, car_data: dict):
+    """Отправка фотографий автомобиля"""
+    if 'images' in car_data:
+        media_group = []
+        for image_path in car_data['images'][:10]:  # Ограничиваем до 10 фото
+            # Преобразуем путь из веб-формата в локальный
+            local_path = f"static{image_path}"
+            try:
+                media_group.append(InputMediaPhoto(media=open(local_path, 'rb')))
+            except FileNotFoundError:
+                continue
+        
+        if media_group:
+            await update.message.reply_media_group(media=media_group)
+        else:
+            await update.message.reply_text("К сожалению, фотографии временно недоступны")
 
 def main():
     """Запуск бота"""
