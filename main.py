@@ -86,6 +86,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начальное меню бота"""
     keyboard = [
         [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
+        [InlineKeyboardButton("💰 Каталог", callback_data='catalog')],
         [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
         [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
         [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
