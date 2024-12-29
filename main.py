@@ -24,29 +24,13 @@ from telegram.ext import (
 from dotenv import load_dotenv
 import os
 import json
-from data.catalog import get_filtered_cars, cars_data, categories, price_ranges, countries
-from data import faq_data
-
-
-# переменные окружения
-load_dotenv()
-TOKEN = os.getenv('TELEGRAM_TOKEN')
-
-# ID менеджера
-MANAGER_ID = os.getenv('TELEGRAM_MANAGER_ID')
-# Username менеджера
-MANAGER_USERNAME = os.getenv('TELEGRAM_MANAGER_USERNAME')
-
-# Логирование
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
-
-# Константы для состояний разговора
-(
+from config import (
+    TOKEN, 
+    MANAGER_ID, 
+    MANAGER_USERNAME, 
+    logger,
+    WAITING_QUESTION,
+    SURVEY_BUDGET,
     WAITING_QUESTION,
     SURVEY_BUDGET,
     SURVEY_CAR_TYPE,
@@ -56,7 +40,20 @@ logger = logging.getLogger(__name__)
     SURVEY_TIMELINE,
     SURVEY_TRADE_IN,
     SURVEY_CONTACT
-) = range(9)
+)
+from data.catalog import get_filtered_cars, cars_data, categories, price_ranges, countries
+from data import faq_data
+from utils.keyboards import (
+    get_main_menu_keyboard,
+    get_catalog_countries_keyboard,
+    get_car_selection_keyboard,
+    get_body_type_keyboard,
+    get_car_actions_keyboard,
+    get_survey_start_keyboard,
+    get_survey_budget_keyboard,
+    get_return_menu_keyboard,
+    get_navigation_keyboard
+)
 
 # словарь для хранения ответов пользователей
 survey_responses = {}
@@ -84,17 +81,7 @@ calculator_data = {
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начальное меню бота"""
-    keyboard = [
-        [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
-        [InlineKeyboardButton("💰 Каталог", callback_data='catalog')],
-        [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
-        [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
-        [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
-        [InlineKeyboardButton("📋 Опрос за подарок - 10 000₽!", callback_data='survey')],
-        [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')],
-        [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = get_main_menu_keyboard()
     await update.message.reply_text(
         "Привет! 👋 Я помогу вам подобрать автомобиль из Китая. Чем могу помочь?",
         reply_markup=reply_markup
@@ -102,14 +89,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def car_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начало процесса подбора автомобиля"""
-    keyboard = [
-        [
-            InlineKeyboardButton("До 1.5 млн", callback_data='budget_economy'),
-            InlineKeyboardButton("1.5-3 млн", callback_data='budget_medium'),
-            InlineKeyboardButton("Больше 3 млн", callback_data='budget_premium')
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = get_car_selection_keyboard()
     
     if update.callback_query:
         await update.callback_query.answer()
@@ -129,23 +109,7 @@ async def select_body_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     budget = query.data.split('_')[1]
     user_states[query.from_user.id] = {'budget': budget}
     
-    keyboard = [
-        [
-            InlineKeyboardButton("Седан", callback_data=f'body_sedan_{budget}'),
-            InlineKeyboardButton("Кроссовер", callback_data=f'body_crossover_{budget}')
-        ],
-        [
-            InlineKeyboardButton("Минивэн", callback_data=f'body_minivan_{budget}'),
-            InlineKeyboardButton("Внедорожник", callback_data=f'body_suv_{budget}')
-        ],
-        [
-            InlineKeyboardButton("Электромобиль", callback_data=f'body_electric_{budget}')
-        ],
-        [
-            InlineKeyboardButton("« Назад", callback_data='car_selection')
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = get_body_type_keyboard()
     
     await query.answer()
     await query.message.edit_text(
