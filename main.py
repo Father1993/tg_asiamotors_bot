@@ -241,8 +241,8 @@ async def process_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
         phone = update.message.contact.phone_number
         context.user_data['phone'] = phone
         
-        await update.message.reply_text(
-            "Спасибо! Теперь опишите ваш вопрос одним сообщением:",
+        await update.message.ьreply_text(
+            "Спасибо! Тепер опишите ваш вопрос одним сообщением:",
             reply_markup=ReplyKeyboardRemove()
         )
         return WAITING_QUESTION
@@ -278,7 +278,7 @@ async def process_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
             [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
             [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
-            [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
+            [InlineKeyboardButton("📋 Пройти  опрос", callback_data='survey')],
             [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
             [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
         ]
