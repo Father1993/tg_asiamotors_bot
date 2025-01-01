@@ -278,7 +278,7 @@ async def process_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("💰 Калькулятор стоимости", callback_data='calculator')],
             [InlineKeyboardButton("⭐️ Избранное", callback_data='favorites')],
             [InlineKeyboardButton("🔔 Уведомления", callback_data='notifications')],
-            [InlineKeyboardButton("📋 Пройти  опрос", callback_data='survey')],
+            [InlineKeyboardButton("📋 Пройти опрос", callback_data='survey')],
             [InlineKeyboardButton("❓ FAQ", callback_data='faq')],
             [InlineKeyboardButton("👨‍💼 Связаться с менеджером", callback_data='contact_manager')]
         ]
@@ -504,7 +504,7 @@ async def finish_survey(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text=manager_message
         )
     except Exception as e:
-        logging.error(f"Ошибка при отправке результатов опроса менеджеру: {e}")
+        logging.error(f"Ошибка при отправке результатов вопроса менеджеру: {e}")
 
     keyboard = [
         [InlineKeyboardButton("🚗 Подобрать автомобиль", callback_data='car_selection')],
