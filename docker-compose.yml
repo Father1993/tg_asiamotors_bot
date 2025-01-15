@@ -2,13 +2,30 @@ version: '3.8'
 
 services:
     bot:
-        build: .
+        build:
+            context: .
+            dockerfile: Dockerfile
         container_name: tg_am_bot
         restart: always
         env_file:
             - .env
         volumes:
-            - .:/app
+            - ./:/app
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 5s
+        logging:
+            driver: json-file
+            options:
+                max-size: 10m
+                max-file: 3
+        deploy:
+            resources:
+                limits:
+                    memory: 512M
         networks:
             - bot_network
 
