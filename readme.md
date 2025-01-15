@@ -67,10 +67,7 @@ tg_am_bot/
 
 ## Разработчик
 
-**Александр Мельников**
-
--   Telegram: [@AlexMeln]
--   GitHub: [github-profile-url]
+**Spinej Andrej**
 
 ## Лицензия
 
@@ -78,4 +75,4 @@ tg_am_bot/
 
 ---
 
-© 2024 Asia Motors. Разработано Александром Мельниковым.
+© 2024 Asia Motors. Разработано Спиней Андреем.
