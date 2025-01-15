@@ -4,6 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 import re
 from datetime import datetime
+import logging
 
 from app.config import KeyboardButtons as kb, ADMIN_IDS
 from app.FSM.survey import SurveyStates
@@ -46,6 +47,15 @@ purpose_kb = ReplyKeyboardMarkup(
         [KeyboardButton(text="Для города"), KeyboardButton(text="Для семьи")],
         [KeyboardButton(text="Для бизнеса"), KeyboardButton(text="Для путешествий")],
         [KeyboardButton(text="Как второй автомобиль")]
+    ],
+    resize_keyboard=True
+)
+
+current_car_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🇯🇵 Японский"), KeyboardButton(text="🇨🇳 Китайский")],
+        [KeyboardButton(text="🇰🇷 Корейский"), KeyboardButton(text="🇪🇺 Европейский")],
+        [KeyboardButton(text="🇺🇸 Американский"), KeyboardButton(text="🔄 Другой")]
     ],
     resize_keyboard=True
 )
@@ -119,8 +129,8 @@ async def process_timeframe(message: Message, state: FSMContext):
     await state.update_data(timeframe=message.text)
     await state.set_state(SurveyStates.WAITING_CURRENT_CAR)
     await message.answer(
-        "🚗 Какой автомобиль вы используете сейчас?\n"
-        "Укажите марку и модель:"
+        "🚗 Какой автомобиль вы используете сейчас?",
+        reply_markup=current_car_kb
     )
 
 @router.message(SurveyStates.WAITING_CURRENT_CAR)
