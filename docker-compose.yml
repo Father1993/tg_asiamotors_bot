@@ -4,9 +4,14 @@ services:
     bot:
         build: .
         container_name: tg_am_bot
-        volumes:
-            - .:/app
-            - ./data:/app/data
+        restart: always
         env_file:
             - .env
-        restart: unless-stopped
+        volumes:
+            - .:/app
+        networks:
+            - bot_network
+
+networks:
+    bot_network:
+        driver: bridge
