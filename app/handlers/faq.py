@@ -8,6 +8,8 @@ from aiogram.exceptions import TelegramBadRequest
 from app.config import KeyboardButtons as kb
 from app.keyboards import get_faq_keyboard, get_main_keyboard, get_faq_answer_keyboard
 from app.constants.faq import faq_data
+from app.constants.callbacks import FAQCallbacks
+from app.constants.messages import FAQMessages
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -15,10 +17,10 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 @router.message(F.text == kb.FAQ)
-@router.callback_query(F.data == "faq")
+@router.callback_query(F.data == FAQCallbacks.SHOW_FAQ)
 async def show_faq(event: Message | CallbackQuery, state: FSMContext):
     """Показать FAQ"""
-    text = "❓ Часто задаваемые вопросы\n\nВыберите интересующий вас вопрос:"
+    text = FAQMessages.MAIN_MENU
     
     if isinstance(event, CallbackQuery):
         await event.answer()
@@ -26,13 +28,12 @@ async def show_faq(event: Message | CallbackQuery, state: FSMContext):
     else:
         await event.answer(text, reply_markup=get_faq_keyboard())
 
-@router.callback_query(F.data.startswith("faq_"))
+@router.callback_query(F.data.startswith(FAQCallbacks.ANSWER_PREFIX))
 async def show_faq_answer(callback: CallbackQuery, state: FSMContext):
     """Показ ответа на конкретный вопрос FAQ"""
     try:
         # Получаем ключ вопроса из callback_data
-        # Берем всю строку после 'faq_'
-        faq_key = callback.data[4:]  # пропускаем 'faq_' и берем весь остаток
+        faq_key = callback.data[len(FAQCallbacks.ANSWER_PREFIX):]
         logger.info(f"Full callback data: {callback.data}")
         logger.info(f"Extracted key: {faq_key}")
         logger.info(f"Available keys: {list(faq_data.keys())}")
@@ -52,7 +53,7 @@ async def show_faq_answer(callback: CallbackQuery, state: FSMContext):
         else:
             logger.warning(f"FAQ key not found: {faq_key}")
             await callback.answer(
-                "Вопрос не найден. Пожалуйста, выберите другой вопрос.",
+                FAQMessages.NOT_FOUND,
                 show_alert=True
             )
             
@@ -61,16 +62,16 @@ async def show_faq_answer(callback: CallbackQuery, state: FSMContext):
     except Exception as e:
         logger.error(f"Error in FAQ answer: {e}")
         await callback.answer(
-            "Произошла ошибка. Попробуйте еще раз.",
+            FAQMessages.ERROR,
             show_alert=True
         )
 
-@router.callback_query(F.data == "start")
+@router.callback_query(F.data == FAQCallbacks.BACK_TO_MAIN)
 async def handle_start(callback: CallbackQuery, state: FSMContext):
     """Обработка возврата в главное меню"""
     await callback.message.delete()
     await callback.message.answer(
-        "Выберите нужный раздел:",
+        FAQMessages.MAIN_MENU_PROMPT,
         reply_markup=get_main_keyboard()
     )
     await callback.answer()
