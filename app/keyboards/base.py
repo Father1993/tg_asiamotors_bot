@@ -26,3 +26,9 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
         resize_keyboard=True
     )
 
+def get_selection_keyboard(buttons: list) -> ReplyKeyboardMarkup:
+    """Клавиатура для выбора опций при подборе авто"""
+    keyboard = [[KeyboardButton(text=text) for text in row] for row in buttons]
+    keyboard.append([KeyboardButton(text=KeyboardButtons.MAIN_MENU)]) 
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+

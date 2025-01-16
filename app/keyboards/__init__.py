@@ -17,6 +17,14 @@ from .catalog import (
     get_main_menu_keyboard
 )
 
+from .car_selection import (
+    get_lifestyle_keyboard,
+    get_budget_keyboard,
+    get_passengers_keyboard,
+    get_usage_keyboard,
+    get_priorities_keyboard
+)
+
 __all__ = [
     'get_main_keyboard',
     'get_faq_keyboard',
@@ -32,5 +40,9 @@ __all__ = [
     'get_drive_types_keyboard',
     'get_fuel_types_keyboard',
     'get_pagination_keyboard',
-    'get_main_menu_keyboard'
+    'get_main_menu_keyboard',
+    'get_lifestyle_keyboard',
+    'get_passengers_keyboard',
+    'get_usage_keyboard',
+    'get_priorities_keyboard'
 ]

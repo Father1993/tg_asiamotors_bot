@@ -13,3 +13,6 @@ SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
 # ID администраторов
 ADMIN_IDS = list(map(int, os.getenv('ADMIN_IDS', '').split(',')))
+
+# URL сайта
+WEBSITE_URL = "https://asiamotors.su"
