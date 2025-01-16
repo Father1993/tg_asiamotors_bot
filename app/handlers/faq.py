@@ -1,11 +1,8 @@
 import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.exceptions import TelegramBadRequest
-
-from app.config import KeyboardButtons as kb
+from app.keyboards.base import KeyboardButtons as kb
 from app.keyboards import get_faq_keyboard, get_main_keyboard, get_faq_answer_keyboard
 from app.constants.faq import faq_data
 from app.constants.callbacks import FAQCallbacks

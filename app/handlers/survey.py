@@ -1,12 +1,12 @@
 from aiogram import Router, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import Command
+from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 import re
 from datetime import datetime
 import logging
 
-from app.config import KeyboardButtons as kb, ADMIN_IDS
+from app.keyboards.base import KeyboardButtons as kb
+from app.config import ADMIN_IDS
 from app.FSM.survey import SurveyStates
 from app.constants.messages import SurveyMessages as msgs
 from app.keyboards import (

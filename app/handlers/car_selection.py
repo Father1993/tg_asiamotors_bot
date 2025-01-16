@@ -3,7 +3,7 @@ from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
-from app.config import KeyboardButtons as kb
+from app.keyboards.base  import KeyboardButtons as kb
 
 router = Router()
 

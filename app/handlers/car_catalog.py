@@ -4,7 +4,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 import json
 
-from app.config import KeyboardButtons as kb
+from app.keyboards.base import KeyboardButtons as kb
 from app.FSM.catalog import CatalogStates
 from app.utils.supabase import SupabaseService
 from app.keyboards import get_main_keyboard
