@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 import logging
 
@@ -39,10 +39,37 @@ async def send_cars_info(message: Message, cars: list, show_more_button: bool = 
             equipment=equipment_info
         )
 
+        # Проверяем, в избранном ли автомобиль
+        is_favorite = await supabase.is_favorite(message.from_user.id, car['id'])
+        
+        # Добавляем индикатор избранного в описание
+        favorite_indicator = "❤️ В избранном\n" if is_favorite else ""
+        car_info = favorite_indicator + car_info
+
+        # Формируем кнопку с правильным текстом
+        keyboard = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="❤️ В избранном" if is_favorite else "🤍 Добавить в избранное",
+                        callback_data=f"fav_{car['id']}"
+                    )
+                ],
+                # Можно добавить другие кнопки если нужно
+            ]
+        )
+
         if car.get('images') and len(car['images']) > 0:
-            await message.answer_photo(photo=car['images'][0], caption=car_info)
+            await message.answer_photo(
+                photo=car['images'][0], 
+                caption=car_info,
+                reply_markup=keyboard
+            )
         else:
-            await message.answer(car_info)
+            await message.answer(
+                car_info,
+                reply_markup=keyboard
+            )
 
     keyboard = get_pagination_keyboard(offset) if show_more_button else get_main_menu_keyboard()
     await message.answer(

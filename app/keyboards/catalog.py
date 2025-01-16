@@ -1,25 +1,8 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from app.keyboards.base import KeyboardButtons as kb
+from app.constants.catalog import CatalogButtons
 
-class CatalogButtons:
-    """Константы для кнопок каталога"""
-    CROSSOVER = "Кроссовер"
-    SUV = "Джип"
-    SEDAN = "Седан"
-    WAGON = "Универсал"
-    MINIVAN = "Минивен"
-    
-    FULL_DRIVE = "Полный"
-    FRONT_DRIVE = "Передний"
-    REAR_DRIVE = "Задний"
-    
-    PETROL = "Бензин"
-    DIESEL = "Дизель"
-    HYBRID = "Гибрид"
-    ELECTRIC = "Электро"
-    
-    SHOW_MORE = "Показать еще"
-    TO_MAIN_MENU = "В главное меню"
+
 
 def get_categories_keyboard() -> ReplyKeyboardMarkup:
     """Клавиатура для выбора категории автомобиля"""
@@ -28,8 +11,8 @@ def get_categories_keyboard() -> ReplyKeyboardMarkup:
             [KeyboardButton(text=CatalogButtons.CROSSOVER), 
              KeyboardButton(text=CatalogButtons.SUV)],
             [KeyboardButton(text=CatalogButtons.SEDAN), 
-             KeyboardButton(text=CatalogButtons.WAGON)],
-            [KeyboardButton(text=CatalogButtons.MINIVAN)],
+            KeyboardButton(text=CatalogButtons.WAGON)],
+             [KeyboardButton(text=CatalogButtons.MINIVAN)],
             [KeyboardButton(text=kb.MAIN_MENU)]
         ],
         resize_keyboard=True

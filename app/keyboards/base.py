@@ -11,7 +11,8 @@ class KeyboardButtons:
     SUPPORT = "👨‍💼 Связаться с менеджером"
     FAQ = "❓ FAQ"
     BACK = "⬅️ Назад"
-    MAIN_MENU = "🏠 Главное меню" 
+    MAIN_MENU = "🏠 Главное меню"
+    CALCULATE_MORE = "🔄 Посчитать ещё"
 
 def get_main_keyboard() -> ReplyKeyboardMarkup:
     """Главная клавиатура"""
