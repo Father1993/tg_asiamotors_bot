@@ -9,6 +9,13 @@ from .survey import (
     get_concerns_keyboard,
     get_contact_time_keyboard
 )
+from .catalog import (
+    get_categories_keyboard,
+    get_drive_types_keyboard,
+    get_fuel_types_keyboard,
+    get_pagination_keyboard,
+    get_main_menu_keyboard
+)
 
 __all__ = [
     'get_main_keyboard',
@@ -20,5 +27,10 @@ __all__ = [
     'get_purpose_keyboard',
     'get_current_car_keyboard',
     'get_concerns_keyboard',
-    'get_contact_time_keyboard'
+    'get_contact_time_keyboard',
+    'get_categories_keyboard',
+    'get_drive_types_keyboard',
+    'get_fuel_types_keyboard',
+    'get_pagination_keyboard',
+    'get_main_menu_keyboard'
 ]
