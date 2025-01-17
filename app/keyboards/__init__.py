@@ -25,6 +25,13 @@ from .car_selection import (
     get_priorities_keyboard
 )
 
+from .calculator import (
+    get_calculator_keyboard,
+    get_year_keyboard,
+    get_engine_volume_keyboard,
+    get_power_keyboard
+)
+
 __all__ = [
     'get_main_keyboard',
     'get_faq_keyboard',
@@ -44,5 +51,9 @@ __all__ = [
     'get_lifestyle_keyboard',
     'get_passengers_keyboard',
     'get_usage_keyboard',
-    'get_priorities_keyboard'
+    'get_priorities_keyboard',
+    'get_calculator_keyboard',
+    'get_year_keyboard',
+    'get_engine_volume_keyboard',
+    'get_power_keyboard'
 ]
