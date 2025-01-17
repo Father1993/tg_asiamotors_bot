@@ -15,7 +15,7 @@ class CarInfoTemplate:
     CARD = (
         "🏁 {brand} {model}\n"
         "📅 Год: {year}\n"
-        "💰 Цена: {price}$\n"
+        "💰 Цена: {price}₽\n"
         "🚘 Пробег: {mileage} км\n"
         "⚙️ Двигатель: {engine_volume} л. ({horse_power} л.с.)\n"
         "🔧 КПП: {transmission}\n"
