@@ -7,8 +7,8 @@ class CalculatorConstants:
     CNY_RATE = 14.7  # Курс юаня к рублю
     EUR_RATE = 106.2  # Курс евро к рублю
     COMPANY_COMMISSION_RUB = 100000  # Фиксированная комиссия в рублях
-    CHINA_EXPENSES_CNY = 15000  # Расходы в Китае (юани)
-    RUSSIA_EXPENSES_RUB = 150000  # Расходы в РФ (рубли)
+    CHINA_EXPENSES_CNY = 18000  # Расходы в Китае (юани)
+    RUSSIA_EXPENSES_RUB = 100000  # Расходы в РФ (рубли)
 
 class DutyRates:
     """Ставки пошлин для разных категорий авто"""
