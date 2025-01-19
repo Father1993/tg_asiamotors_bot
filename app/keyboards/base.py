@@ -19,7 +19,7 @@ def get_main_keyboard() -> ReplyKeyboardMarkup:
     buttons = [
         [KeyboardButtons.CATALOG, KeyboardButtons.SELECT_CAR],
         [KeyboardButtons.CALCULATOR, KeyboardButtons.FAVORITES],
-        [KeyboardButtons.NOTIFICATIONS, KeyboardButtons.SURVEY],
+        [KeyboardButtons.SURVEY],
         [KeyboardButtons.SUPPORT, KeyboardButtons.FAQ],
     ]
     return ReplyKeyboardMarkup(

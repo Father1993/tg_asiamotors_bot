@@ -9,7 +9,6 @@ from app.handlers import (
     register_car_selection_handlers,
     register_calculator_handlers,
     register_favorites_handlers,
-    register_notifications_handlers,
     register_survey_handlers,
     register_support_handlers,
     register_faq_handlers,
@@ -31,7 +30,6 @@ async def create_dispatcher(bot: Bot) -> Dispatcher:
     register_car_selection_handlers(dp)
     register_calculator_handlers(dp)
     register_favorites_handlers(dp)
-    register_notifications_handlers(dp)
     register_survey_handlers(dp)
     register_support_handlers(dp)
     register_faq_handlers(dp)
