@@ -1,22 +1,31 @@
 import re
-from typing import Optional
+from typing import Tuple
 
-async def validate_phone(phone: str) -> bool:
+async def validate_phone(phone: str) -> Tuple[bool, str]:
     """
-    Валидация номера телефона
+    Валидация и нормализация номера телефона.
     
     Args:
-        phone: Номер телефона для проверки
+        phone (str): Номер телефона для проверки
         
     Returns:
-        bool: True если номер валидный, False если нет
+        Tuple[bool, str]: (валиден ли номер, нормализованный номер)
     """
-    if not phone:
-        return False
-        
-    # Удаляем все пробелы и дефисы
-    phone = phone.replace(' ', '').replace('-', '')
+    # Убираем все пробелы, дефисы, скобки и другие спецсимволы
+    cleaned_phone = re.sub(r'[\s\-\(\)\+]', '', phone)
     
-    # Проверяем формат +7XXXXXXXXXX
-    pattern = r'^\+7\d{10}$'
-    return bool(re.match(pattern, phone))
+    # Проверяем, начинается ли номер с 7 или 8
+    if cleaned_phone.startswith('8'):
+        normalized_phone = '+7' + cleaned_phone[1:]
+    elif cleaned_phone.startswith('7'):
+        normalized_phone = '+' + cleaned_phone
+    elif cleaned_phone.startswith('9'):
+        normalized_phone = '+7' + cleaned_phone
+    else:
+        return False, phone
+        
+    # Проверяем длину номера (должно быть 11 цифр после нормализации)
+    if not re.match(r'^\+7\d{10}$', normalized_phone):
+        return False, phone
+        
+    return True, normalized_phone
