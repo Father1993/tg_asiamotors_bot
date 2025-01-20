@@ -49,11 +49,13 @@ def get_pagination_keyboard(offset: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=CatalogButtons.SHOW_MORE, 
+                    text=CatalogButtons.SHOW_MORE,
                     callback_data=f"show_more_{offset}"
-                ),
+                )
+            ],
+            [
                 InlineKeyboardButton(
-                    text=CatalogButtons.TO_MAIN_MENU, 
+                    text=CatalogButtons.TO_MAIN_MENU,
                     callback_data="to_main_menu"
                 )
             ]
@@ -66,7 +68,7 @@ def get_main_menu_keyboard() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=CatalogButtons.TO_MAIN_MENU, 
+                    text=CatalogButtons.TO_MAIN_MENU,
                     callback_data="to_main_menu"
                 )
             ]

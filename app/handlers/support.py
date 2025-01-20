@@ -56,12 +56,14 @@ async def process_name(message: Message, state: FSMContext):
 
 @router.message(SupportStates.WAITING_PHONE)
 async def process_phone(message: Message, state: FSMContext):
-    """Обработка телефона"""
-    if not await validate_phone(message.text):
+    """Обработка введенного номера телефона"""
+    is_valid, normalized_phone = await validate_phone(message.text)
+    
+    if not is_valid:
         await message.answer(msgs.INVALID_PHONE)
         return
-
-    await state.update_data(phone=message.text)
+        
+    await state.update_data(phone=normalized_phone)
     await state.set_state(SupportStates.WAITING_QUESTION)
     await message.answer(msgs.QUESTION_REQUEST)
 

@@ -41,6 +41,7 @@ class CatalogButtons:
     ELECTRIC = "Электро"
     
     SHOW_MORE = "Показать еще"
+    TO_MAIN_MENU = "🏠 В главное меню"
 
     # Маппинг категорий
 CATEGORY_MAPPING = {

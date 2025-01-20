@@ -18,6 +18,7 @@ from app.keyboards import (
     get_concerns_keyboard,
     get_contact_time_keyboard
 )
+from app.utils.validators import validate_phone
 
 
 logger = logging.getLogger(__name__)
@@ -49,9 +50,6 @@ def generate_discount_code(user_id: int) -> str:
     """Генерация уникального кода скидки"""
     return f"ASIA{user_id}{datetime.now().strftime('%d%m')}"
 
-async def validate_phone(phone: str) -> bool:
-    """Валидация номера телефона"""
-    return bool(re.match(r'^\+7\d{10}$', phone))
 
 @router.message(F.text == kb.SURVEY)
 async def start_survey(message: Message, state: FSMContext) -> None:
@@ -68,12 +66,14 @@ async def process_name(message: Message, state: FSMContext) -> None:
 
 @router.message(SurveyStates.WAITING_PHONE)
 async def process_phone(message: Message, state: FSMContext) -> None:
-    """Обработка номера телефона"""
-    if not await validate_phone(message.text):
+    """Обработка введенного номера телефона"""
+    is_valid, normalized_phone = await validate_phone(message.text)
+    
+    if not is_valid:
         await message.answer(msgs.INVALID_PHONE)
         return
-
-    await state.update_data(phone=message.text)
+    
+    await state.update_data(phone=normalized_phone)
     await state.set_state(SurveyStates.WAITING_BUDGET)
     await message.answer(msgs.BUDGET_QUESTION, reply_markup=get_budget_keyboard())
 
