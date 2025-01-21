@@ -1,7 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
-import re
 from datetime import datetime
 import logging
 from app.keyboards.base import KeyboardButtons as kb
