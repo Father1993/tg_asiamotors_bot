@@ -12,6 +12,7 @@ from app.handlers import (
     register_survey_handlers,
     register_support_handlers,
     register_faq_handlers,
+    register_admin_handlers
 )
 from app.handlers.base import register_handlers as register_base_handlers
 
@@ -33,5 +34,6 @@ async def create_dispatcher(bot: Bot) -> Dispatcher:
     register_survey_handlers(dp)
     register_support_handlers(dp)
     register_faq_handlers(dp)
+    register_admin_handlers(dp)
     
     return dp 

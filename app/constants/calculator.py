@@ -1,11 +1,10 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 @dataclass
 class CalculatorConstants:
     """Константы для расчета стоимости авто"""
-    CNY_RATE = 14.12  # Курс юаня к рублю
-    EUR_RATE = 103.29  # Курс евро к рублю
+    CNY_RATE = 13.97  # Курс юаня к рублю
+    EUR_RATE = 101.18  # Курс евро к рублю
     COMPANY_COMMISSION_RUB = 50000  # Фиксированная комиссия в рублях
     CHINA_EXPENSES_CNY = 18000  # Расходы в Китае (юани)
     RUSSIA_EXPENSES_RUB = 100000  # Расходы в РФ (рубли)
