@@ -65,3 +65,35 @@ class SupabaseService:
             .eq('car_id', car_id)\
             .execute()
         return bool(result.data)
+
+    async def get_currency_rates(self) -> Dict[str, float]:
+        """Получение текущих курсов валют"""
+        try:
+            result = self.client.table('currency_rates')\
+                .select('currency_code, rate')\
+                .execute()
+            return {item['currency_code']: float(item['rate']) for item in result.data}
+        except Exception:
+            return {}
+
+    async def update_currency_rate(self, currency_code: str, new_rate: float) -> bool:
+        """Обновление курса валюты"""
+        try:
+            result = self.client.table('currency_rates')\
+                .update({'rate': new_rate})\
+                .eq('currency_code', currency_code)\
+                .execute()
+            return bool(result.data)
+        except Exception:
+            return False
+
+    async def get_single_currency_rate(self, currency_code: str) -> float | None:
+        """Получение курса конкретной валюты"""
+        try:
+            result = self.client.table('currency_rates')\
+                .select('rate')\
+                .eq('currency_code', currency_code)\
+                .execute()
+            return float(result.data[0]['rate']) if result.data else None
+        except Exception:
+            return None

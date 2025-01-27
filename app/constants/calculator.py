@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
 
 @dataclass
 class CalculatorConstants:

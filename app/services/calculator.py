@@ -1,12 +1,36 @@
 from datetime import datetime
 from typing import Dict, Tuple
 from app.constants.calculator import CalculatorConstants, DutyRates
+from app.utils.supabase import SupabaseService
 
 class CarCalculator:
     """Сервис для расчета стоимости автомобиля"""
     
     def __init__(self):
         self.constants = CalculatorConstants()
+        self.db = SupabaseService()
+        self._rates_cache = {}
+        self._last_rates_update = None
+    
+    async def _update_rates_cache(self) -> None:
+        """Обновление кэша курсов валют"""
+        rates = await self.db.get_currency_rates()
+        if rates:
+            self._rates_cache = rates
+            self._last_rates_update = datetime.now()
+    
+    async def _get_rate(self, currency: str) -> float:
+        """Получение курса валюты с возможным обновлением кэша"""
+        # Если кэш пустой или прошло больше часа, обновляем
+        if (not self._rates_cache or 
+            not self._last_rates_update or 
+            (datetime.now() - self._last_rates_update).seconds > 3600):
+            await self._update_rates_cache()
+        
+        # Возвращаем курс из кэша или константу как запасной вариант
+        return self._rates_cache.get(currency, 
+            self.constants.CNY_RATE if currency == 'CNY' else self.constants.EUR_RATE
+        )
     
     def _get_car_age_category(self, year: int) -> str:
         """Определяет категорию возраста автомобиля"""
@@ -41,7 +65,7 @@ class CarCalculator:
                 return engine_cc * rate['duty_per_cc']
         return 0
     
-    def calculate_total_cost(self, price_cny: float, year: int, engine_cc: int) -> Dict[str, float]:
+    async def calculate_total_cost(self, price_cny: float, year: int, engine_cc: int) -> Dict[str, float]:
         """
         Расчет полной стоимости автомобиля
         
@@ -53,9 +77,13 @@ class CarCalculator:
         Returns:
             Dict с результатами расчета
         """
+        # Получаем актуальные курсы
+        cny_rate = await self._get_rate('CNY')
+        eur_rate = await self._get_rate('EUR')
+        
         # Конвертация в рубли и евро
-        price_rub = price_cny * self.constants.CNY_RATE
-        price_eur = price_cny * self.constants.CNY_RATE / self.constants.EUR_RATE
+        price_rub = price_cny * cny_rate
+        price_eur = price_cny * cny_rate / eur_rate
         
         # Определяем категорию по возрасту
         age_category = self._get_car_age_category(year)
@@ -70,13 +98,13 @@ class CarCalculator:
             )
         
         # Конвертируем пошлину в рубли
-        duty_rub = duty_eur * self.constants.EUR_RATE
+        duty_rub = duty_eur * eur_rate
         
         # Заменяем расчет комиссии на фиксированную сумму
         commission = self.constants.COMPANY_COMMISSION_RUB
         
         # Добавляем расходы
-        expenses = (self.constants.CHINA_EXPENSES_CNY * self.constants.CNY_RATE + 
+        expenses = (self.constants.CHINA_EXPENSES_CNY * cny_rate + 
                    self.constants.RUSSIA_EXPENSES_RUB)
         
         # Считаем итоговую стоимость
@@ -87,6 +115,6 @@ class CarCalculator:
             'duty': duty_rub,
             'commission': commission,
             'total': total,
-            'cny_rate': self.constants.CNY_RATE,
-            'eur_rate': self.constants.EUR_RATE
+            'cny_rate': cny_rate,
+            'eur_rate': eur_rate
         } 

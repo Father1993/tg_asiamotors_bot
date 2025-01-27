@@ -1,9 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from datetime import datetime
-
 
 from app.keyboards.base import KeyboardButtons as kb, get_main_keyboard
 from app.keyboards.calculator import (
@@ -15,33 +12,11 @@ from app.keyboards.calculator import (
 )
 from app.constants.calculator import CalculatorMessages as msgs
 from app.services.calculator import CarCalculator
+from app.FSM.calculator import CalculatorStates
+from app.utils.validators import is_valid_year, is_valid_number
 
 router = Router()
 calculator = CarCalculator()
-
-class CalculatorStates(StatesGroup):
-    """Состояния FSM для калькулятора"""
-    WAITING_YEAR = State()
-    WAITING_PRICE = State()
-    WAITING_ENGINE = State()
-    WAITING_POWER = State()
-
-def is_valid_year(year: str) -> bool:
-    """Проверка корректности года"""
-    try:
-        year_int = int(year)
-        current_year = datetime.now().year
-        return 1990 <= year_int <= current_year + 1
-    except ValueError:
-        return False
-
-def is_valid_number(value: str) -> bool:
-    """Проверка, является ли строка положительным числом"""
-    try:
-        num = float(value)
-        return num > 0
-    except ValueError:
-        return False
 
 async def start_calculation(message: Message, state: FSMContext):
     """Начало процесса расчета"""
@@ -109,7 +84,7 @@ async def process_power(message: Message, state: FSMContext):
     data = await state.get_data()
     
     # Рассчитываем стоимость
-    result = calculator.calculate_total_cost(
+    result = await calculator.calculate_total_cost(
         price_cny=data['price'],
         year=data['year'],
         engine_cc=data['engine']
