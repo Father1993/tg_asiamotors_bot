@@ -172,4 +172,4 @@ tg_am_bot/
 
 ---
 
-© 2024 Asia Motors. Разработано [Спиней Андреем](https://github.com/Father1993)
+© 2025 Asia Motors. Разработано [Спиней Андреем](https://github.com/Father1993)
